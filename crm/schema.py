@@ -40,7 +40,6 @@ class CreateCustomer(graphene.Mutation):
         customer = Customer.objects.create(**input)
         return CreateCustomer(customer=customer, message="Customer created successfully")
 
-
 class BulkCreateCustomers(graphene.Mutation):
     class Arguments:
         input = graphene.List(CustomerInput, required=True)
@@ -59,7 +58,6 @@ class BulkCreateCustomers(graphene.Mutation):
                 errors.append(str(e))
         return BulkCreateCustomers(customers=customers, errors=errors)
 
-
 class CreateProduct(graphene.Mutation):
     class Arguments:
         input = ProductInput(required=True)
@@ -69,7 +67,6 @@ class CreateProduct(graphene.Mutation):
     def mutate(self, info, input):
         product = Product.objects.create(**input)
         return CreateProduct(product=product)
-
 
 class CreateOrder(graphene.Mutation):
     class Arguments:
@@ -89,6 +86,17 @@ class CreateOrder(graphene.Mutation):
         except Exception as e:
             raise GraphQLError(str(e))
 
+class UpdateLowStockProducts(graphene.Mutation):
+    updated_products = graphene.List(ProductType)
+    message = graphene.String()
+
+    def mutate(self, info):
+        products = Product.objects.filter(stock__lt=10)
+        for product in products:
+            product.stock += 10
+            product.save()
+        return UpdateLowStockProducts(updated_products=products, message="Low stock products restocked.")
+
 class Query(graphene.ObjectType):
     all_customers = graphene.List(CustomerType)
     all_products = graphene.List(ProductType)
@@ -103,9 +111,9 @@ class Query(graphene.ObjectType):
     def resolve_all_orders(root, info):
         return Order.objects.all()
 
-
 class Mutation(graphene.ObjectType):
     create_customer = CreateCustomer.Field()
     bulk_create_customers = BulkCreateCustomers.Field()
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
+    update_low_stock_products = UpdateLowStockProducts.Field()

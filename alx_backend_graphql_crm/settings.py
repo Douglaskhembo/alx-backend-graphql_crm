@@ -40,7 +40,16 @@ INSTALLED_APPS = [
     'django_filters',
     'graphene_django',
     'crm',
+    'django_crontab',
 ]
+
+INSTALLED_APPS += ['django_crontab']
+
+CRONJOBS = [
+    ('*/5 * * * *', 'crm.cron.log_crm_heartbeat'),
+    ('0 */12 * * *', 'crm.cron.update_low_stock'),
+]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
