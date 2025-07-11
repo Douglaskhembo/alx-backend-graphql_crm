@@ -1,11 +1,10 @@
 import requests
-from datetime import datetime, timedelta
+import datetime
 
-since = (datetime.now() - timedelta(days=7)).isoformat()
-
+# Define the GraphQL query
 query = """
 query {
-  orders {
+  allOrders {
     id
     orderDate
     customer {
@@ -15,13 +14,26 @@ query {
 }
 """
 
-response = requests.post("http://localhost:8000/graphql", json={"query": query})
-data = response.json().get("data", {}).get("orders", [])
+# Send the request to the local GraphQL endpoint
+response = requests.post(
+    "http://localhost:8000/graphql",
+    json={'query': query},
+    headers={'Content-Type': 'application/json'}
+)
 
-with open("/tmp/order_reminders_log.txt", "a") as log:
-    for order in data:
-        order_date = order["orderDate"]
-        if order_date >= since:
-            log.write(f"{datetime.now()} - Order {order['id']} → {order['customer']['email']}\n")
+# Parse the results
+if response.status_code == 200:
+    data = response.json()
+    orders = data["data"]["allOrders"]
+    now = datetime.datetime.now()
+    one_week_ago = now - datetime.timedelta(days=7)
 
-print("Order reminders processed!")
+    with open("/tmp/order_reminders_log.txt", "a") as log_file:
+        for order in orders:
+            order_date = datetime.datetime.fromisoformat(order["orderDate"])
+            if order_date >= one_week_ago:
+                log_file.write(f"{now} - Order ID: {order['id']} - Email: {order['customer']['email']}\n")
+
+    print("Order reminders processed!")
+else:
+    print(f"Failed to fetch orders: {response.status_code}")
