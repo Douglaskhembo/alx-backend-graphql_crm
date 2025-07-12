@@ -1,8 +1,18 @@
-import requests
 import datetime
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
+
+# GraphQL client setup
+transport = RequestsHTTPTransport(
+    url='http://localhost:8000/graphql',
+    verify=False,
+    retries=3,
+)
+
+client = Client(transport=transport, fetch_schema_from_transport=True)
 
 # Define the GraphQL query
-query = """
+query = gql("""
 query {
   allOrders {
     id
@@ -12,19 +22,13 @@ query {
     }
   }
 }
-"""
+""")
 
-# Send the request to the local GraphQL endpoint
-response = requests.post(
-    "http://localhost:8000/graphql",
-    json={'query': query},
-    headers={'Content-Type': 'application/json'}
-)
+# Execute the query
+try:
+    result = client.execute(query)
+    orders = result.get("allOrders", [])
 
-# Parse the results
-if response.status_code == 200:
-    data = response.json()
-    orders = data["data"]["allOrders"]
     now = datetime.datetime.now()
     one_week_ago = now - datetime.timedelta(days=7)
 
@@ -32,8 +36,11 @@ if response.status_code == 200:
         for order in orders:
             order_date = datetime.datetime.fromisoformat(order["orderDate"])
             if order_date >= one_week_ago:
-                log_file.write(f"{now} - Order ID: {order['id']} - Email: {order['customer']['email']}\n")
+                log_file.write(
+                    f"{now.strftime('%Y-%m-%d %H:%M:%S')} - Order ID: {order['id']}, Email: {order['customer']['email']}\n"
+                )
 
     print("Order reminders processed!")
-else:
-    print(f"Failed to fetch orders: {response.status_code}")
+
+except Exception as e:
+    print(f"Failed to send order reminders: {str(e)}")
