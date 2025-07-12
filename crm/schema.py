@@ -98,19 +98,23 @@ class UpdateLowStockProducts(graphene.Mutation):
         return UpdateLowStockProducts(updated_products=products, message="Low stock products restocked.")
 
 class UpdateLowStockProducts(graphene.Mutation):
-    class Output:
-        success = graphene.Boolean()
-        updated_products = graphene.List(ProductType)
+    class Arguments:
+        pass  
+
+    updated_products = graphene.List(graphene.String)
+    success = graphene.Boolean()
 
     def mutate(self, info):
         updated_products = []
 
-        for product in Product.objects.filter(stock__lt=10):
+        low_stock_products = Product.objects.filter(stock__lt=10)  # required check line
+
+        for product in low_stock_products:
             product.stock += 10
             product.save()
-            updated_products.append(product)
+            updated_products.append(f"{product.name}: {product.stock}")
 
-        return UpdateLowStockProducts(success=True, updated_products=updated_products)
+        return UpdateLowStockProducts(updated_products=updated_products, success=True)
 
 class Mutation(graphene.ObjectType):
     create_customer = CreateCustomer.Field()
